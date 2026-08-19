@@ -3,7 +3,6 @@ import pandas as pd
 import gspread
 from google.oauth2 import service_account
 from io import BytesIO
-import os
 
 st.set_page_config(page_title="X5 Торги — Автозаполнение", layout="centered")
 st.title("📦 Автозаполнение ставок для торгов X5")
@@ -152,13 +151,10 @@ if uploaded_file is not None and st.button("🚀 Обработать файл")
             if pd.notna(row.get("Цена_из_справочника")):
                 new_price = row["Цена_из_справочника"] - discount
                 df.at[idx, "Мое предложение"] = round(new_price, 2)
-                # Столбец M (самовывоз) = "Мое предложение" + 10 руб
                 df.at[idx, "Мое предложение (самовывоз)"] = round(new_price + 10, 2)
                 df.at[idx, "Страна"] = row["Страна_из_справочника"]
-                
                 if comment.strip():
                     df.at[idx, "Мой комментарий"] = comment.strip()
-                
                 df.at[idx, "Мой гарантированный объем"] = row["Количество"]
                 updated_count += 1
 
@@ -173,7 +169,6 @@ if uploaded_file is not None and st.button("🚀 Обработать файл")
             st.warning("⚠️ После удаления пустых позиций не осталось ни одной строки.")
             st.stop()
 
-        # Подготовка файла для скачивания и сохранения
         output = BytesIO()
         with pd.ExcelWriter(output, engine="openpyxl") as writer:
             df.to_excel(writer, index=False, sheet_name="Сбор предложений")
@@ -183,33 +178,13 @@ if uploaded_file is not None and st.button("🚀 Обработать файл")
         if deleted > 0:
             st.info(f"ℹ️ Удалены строки, которые не были заполнены ни автоматически, ни вручную.")
 
-        # === Скачивание через браузер ===
+        # Единственная кнопка скачивания
         st.download_button(
-            label="📥 Скачать файл (стандартная загрузка)",
+            label="📥 Скачать файл (выберите папку для сохранения)",
             data=output,
             file_name=uploaded_file.name,
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
-        # === Сохранение в локальную папку (для локального запуска) ===
-        st.markdown("---")
-        st.subheader("💾 Сохранить файл в локальную папку")
-        save_path = st.text_input(
-            "Введите путь для сохранения (включая имя файла)", 
-            value=os.path.join(os.path.expanduser("~"), "Загрузки", uploaded_file.name),
-            help="Например: C:\\Users\\ВашеИмя\\Documents\\мой_файл.xlsx"
-        )
-        if st.button("Сохранить в указанную папку"):
-            try:
-                save_dir = os.path.dirname(save_path)
-                if save_dir and not os.path.exists(save_dir):
-                    os.makedirs(save_dir)
-                with open(save_path, "wb") as f:
-                    f.write(output.getvalue())
-                st.success(f"✅ Файл сохранён по пути: {save_path}")
-            except Exception as e:
-                st.error(f"Ошибка при сохранении: {e}")
-
-        # Превью
         with st.expander("👁️ Превью результата (первые 5 строк)"):
             st.dataframe(df.head())
