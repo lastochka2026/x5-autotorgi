@@ -152,12 +152,12 @@ if uploaded_file is not None and st.button("🚀 Обработать файл")
             if pd.notna(row.get("Цена_из_справочника")):
                 new_price = row["Цена_из_справочника"] - discount
                 df.at[idx, "Мое предложение"] = round(new_price, 2)
+                # Столбец M (самовывоз) = "Мое предложение" + 10 руб
+                df.at[idx, "Мое предложение (самовывоз)"] = round(new_price + 10, 2)
                 df.at[idx, "Страна"] = row["Страна_из_справочника"]
                 
-                # Комментарий: если пользователь ввёл что-то, перезаписываем, иначе оставляем старый
                 if comment.strip():
                     df.at[idx, "Мой комментарий"] = comment.strip()
-                # иначе оставляем как было (ничего не делаем)
                 
                 df.at[idx, "Мой гарантированный объем"] = row["Количество"]
                 updated_count += 1
@@ -194,9 +194,11 @@ if uploaded_file is not None and st.button("🚀 Обработать файл")
         # === Сохранение в локальную папку (для локального запуска) ===
         st.markdown("---")
         st.subheader("💾 Сохранить файл в локальную папку")
-        save_path = st.text_input("Введите путь для сохранения (включая имя файла)", 
-                                  value=os.path.join(os.path.expanduser("~"), "Загрузки", uploaded_file.name),
-                                  help="Например: C:\\Users\\ВашеИмя\\Documents\\мой_файл.xlsx")
+        save_path = st.text_input(
+            "Введите путь для сохранения (включая имя файла)", 
+            value=os.path.join(os.path.expanduser("~"), "Загрузки", uploaded_file.name),
+            help="Например: C:\\Users\\ВашеИмя\\Documents\\мой_файл.xlsx"
+        )
         if st.button("Сохранить в указанную папку"):
             try:
                 save_dir = os.path.dirname(save_path)
