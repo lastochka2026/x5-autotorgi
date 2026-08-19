@@ -178,9 +178,9 @@ if uploaded_file is not None and st.button("🚀 Обработать файл")
         if deleted > 0:
             st.info(f"ℹ️ Удалены строки, которые не были заполнены ни автоматически, ни вручную.")
 
-        # Единственная кнопка скачивания
+        # Одна кнопка со старым текстом
         st.download_button(
-            label="📥 Скачать файл (выберите папку для сохранения)",
+            label="📥 Скачать файл ",
             data=output,
             file_name=uploaded_file.name,
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
