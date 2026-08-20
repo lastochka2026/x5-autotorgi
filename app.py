@@ -120,6 +120,9 @@ if uploaded_file is not None and st.button("🚀 Обработать файл")
             st.error(f"Ошибка при чтении файла: {e}")
             st.stop()
 
+        # Приводим колонку "Страна" к строковому типу (чтобы избежать ошибок типа)
+        df["Страна"] = df["Страна"].astype(str)
+
         # Временные колонки
         df["Цена_из_справочника"] = None
         df["Страна_из_справочника"] = None
@@ -141,7 +144,10 @@ if uploaded_file is not None and st.button("🚀 Обработать файл")
             price_value = price_row.iloc[0][col_letter]
             if pd.notna(price_value):
                 df.at[idx, "Цена_из_справочника"] = float(price_value)
-                df.at[idx, "Страна_из_справочника"] = price_row.iloc[0]["Страна"]
+                country = price_row.iloc[0]["Страна"]
+                if pd.isna(country) or country is None:
+                    country = ""
+                df.at[idx, "Страна_из_справочника"] = str(country)
 
         if unknown_rcs:
             st.warning(f"⚠️ Для следующих РЦ не найдено соответствие: {', '.join(unknown_rcs)}")
@@ -178,7 +184,7 @@ if uploaded_file is not None and st.button("🚀 Обработать файл")
         if deleted > 0:
             st.info(f"ℹ️ Удалены строки, которые не были заполнены ни автоматически, ни вручную.")
 
-        # Одна кнопка со старым текстом
+        # Единственная кнопка скачивания
         st.download_button(
             label="📥 Скачать файл ",
             data=output,
