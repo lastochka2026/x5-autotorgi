@@ -120,11 +120,10 @@ if uploaded_file is not None and st.button("🚀 Обработать файл")
             st.error(f"Ошибка при чтении файла: {e}")
             st.stop()
 
-        # Приводим колонки к нужным типам (чтобы избежать ошибок)
+        # Приводим колонки к нужным типам
         df["Страна"] = df["Страна"].astype(str)
         df["Мой комментарий"] = df["Мой комментарий"].astype(str)
         df["Мое предложение"] = pd.to_numeric(df["Мое предложение"], errors="coerce")
-        df["Мое предложение (самовывоз)"] = pd.to_numeric(df["Мое предложение (самовывоз)"], errors="coerce")
         df["Мой гарантированный объем"] = pd.to_numeric(df["Мой гарантированный объем"], errors="coerce")
 
         # Временные колонки
@@ -152,7 +151,6 @@ if uploaded_file is not None and st.button("🚀 Обработать файл")
                 if pd.isna(country) or country is None:
                     country = ""
                 df.at[idx, "Страна_из_справочника"] = str(country)
-            # Если цена отсутствует (NaN) – ничего не делаем, строка останется без цены и будет удалена позже
 
         if unknown_rcs:
             st.warning(f"⚠️ Для следующих РЦ не найдено соответствие: {', '.join(unknown_rcs)}")
@@ -162,12 +160,10 @@ if uploaded_file is not None and st.button("🚀 Обработать файл")
             if pd.notna(row.get("Цена_из_справочника")):
                 new_price = row["Цена_из_справочника"] - discount
                 df.at[idx, "Мое предложение"] = round(new_price, 2)
-                df.at[idx, "Мое предложение (самовывоз)"] = round(new_price + 10, 2)
+                # Столбец M (самовывоз) НЕ ТРОГАЕМ – оставляем как было
                 df.at[idx, "Страна"] = row["Страна_из_справочника"]
-                # Обновляем комментарий, только если пользователь что-то ввёл
                 if comment.strip():
                     df.at[idx, "Мой комментарий"] = comment.strip()
-                # иначе оставляем существующий (уже строка)
                 df.at[idx, "Мой гарантированный объем"] = row["Количество"]
                 updated_count += 1
 
@@ -192,9 +188,8 @@ if uploaded_file is not None and st.button("🚀 Обработать файл")
         if deleted > 0:
             st.info(f"ℹ️ Удалены строки, которые не были заполнены ни автоматически, ни вручную.")
 
-        # Единственная кнопка скачивания
         st.download_button(
-            label="📥 Скачать файл (стандартная загрузка)",
+            label="📥 Скачать файл",
             data=output,
             file_name=uploaded_file.name,
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
