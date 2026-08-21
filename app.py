@@ -3,6 +3,8 @@ import pandas as pd
 import gspread
 from google.oauth2 import service_account
 from io import BytesIO
+import openpyxl
+from openpyxl.utils import get_column_letter
 
 st.set_page_config(page_title="X5 Торги — Автозаполнение", layout="centered")
 st.title("📦 Автозаполнение ставок для торгов X5")
@@ -178,26 +180,38 @@ if uploaded_file is not None and st.button("🚀 Обработать файл")
             st.warning("⚠️ После удаления пустых позиций не осталось ни одной строки.")
             st.stop()
 
-        # --- ОЧИСТКА СТОЛБЦОВ F и M ---
-        # Приводим их к типу object и устанавливаем None (это даст пустые ячейки)
-        if "Предложение X5 с доставкой" in df.columns:
-            df["Предложение X5 с доставкой"] = df["Предложение X5 с доставкой"].astype(object)
-            df["Предложение X5 с доставкой"] = None
-        
-        if "Мое предложение (самовывоз)" in df.columns:
-            df["Мое предложение (самовывоз)"] = df["Мое предложение (самовывоз)"].astype(object)
-            df["Мое предложение (самовывоз)"] = None
+        # Заменяем NaN на пустые строки во всех колонках, кроме F и M (их мы очистим отдельно)
+        df = df.fillna("")
 
-        # Для остальных текстовых колонок заменяем NaN на пустые строки
-        text_cols = ["Страна", "Мой комментарий", "Название PLU", "РЦ доставки", "Информация для поставщика", 
-                     "Калибр Х5", "Сорт X5", "Тип упаковки", "Калибр", "Сорт"]
-        for col in text_cols:
-            if col in df.columns:
-                df[col] = df[col].fillna("").astype(str)
-
+        # Сначала записываем DataFrame в Excel через pandas
         output = BytesIO()
         with pd.ExcelWriter(output, engine="openpyxl") as writer:
             df.to_excel(writer, index=False, sheet_name="Сбор предложений")
+            # Получаем книгу и лист
+            workbook = writer.book
+            sheet = workbook["Сбор предложений"]
+
+            # Определяем номера столбцов F и M по заголовкам
+            header_row = 1  # строка с заголовками (индекс 1 в openpyxl, т.к. 0-я строка - это может быть пустая, но мы записали заголовки)
+            # Находим заголовки
+            col_f = None
+            col_m = None
+            for col_idx, col_name in enumerate(df.columns, start=1):
+                if col_name == "Предложение X5 с доставкой":
+                    col_f = col_idx
+                if col_name == "Мое предложение (самовывоз)":
+                    col_m = col_idx
+
+            # Если нашли колонки, очищаем все ячейки в них (начиная со второй строки, т.к. первая - заголовок)
+            if col_f:
+                for row in range(2, sheet.max_row + 1):
+                    cell = sheet.cell(row=row, column=col_f)
+                    cell.value = None
+            if col_m:
+                for row in range(2, sheet.max_row + 1):
+                    cell = sheet.cell(row=row, column=col_m)
+                    cell.value = None
+
         output.seek(0)
 
         st.success(f"✅ Обновлено {updated_count} позиций. Удалено пустых: {deleted}.")
