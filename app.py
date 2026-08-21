@@ -120,10 +120,11 @@ if uploaded_file is not None and st.button("🚀 Обработать файл")
             st.error(f"Ошибка при чтении файла: {e}")
             st.stop()
 
-        # Приводим колонки к нужным типам
+        # Приводим текстовые колонки к строке, числовые (кроме M) — к числу
         df["Страна"] = df["Страна"].astype(str)
         df["Мой комментарий"] = df["Мой комментарий"].astype(str)
         df["Мое предложение"] = pd.to_numeric(df["Мое предложение"], errors="coerce")
+        # Столбец M (самовывоз) НЕ ТРОГАЕМ — оставляем как есть
         df["Мой гарантированный объем"] = pd.to_numeric(df["Мой гарантированный объем"], errors="coerce")
 
         # Временные колонки
@@ -160,7 +161,7 @@ if uploaded_file is not None and st.button("🚀 Обработать файл")
             if pd.notna(row.get("Цена_из_справочника")):
                 new_price = row["Цена_из_справочника"] - discount
                 df.at[idx, "Мое предложение"] = round(new_price, 2)
-                # Столбец M (самовывоз) НЕ ТРОГАЕМ – оставляем как было
+                # Столбец M (самовывоз) НЕ ЗАПОЛНЯЕМ — оставляем без изменений
                 df.at[idx, "Страна"] = row["Страна_из_справочника"]
                 if comment.strip():
                     df.at[idx, "Мой комментарий"] = comment.strip()
@@ -178,6 +179,9 @@ if uploaded_file is not None and st.button("🚀 Обработать файл")
         if df.empty:
             st.warning("⚠️ После удаления пустых позиций не осталось ни одной строки.")
             st.stop()
+
+        # Заменяем NaN на пустые строки во всех колонках (кроме числовых, но это безопасно)
+        df = df.fillna("")
 
         output = BytesIO()
         with pd.ExcelWriter(output, engine="openpyxl") as writer:
