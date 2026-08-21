@@ -120,8 +120,12 @@ if uploaded_file is not None and st.button("🚀 Обработать файл")
             st.error(f"Ошибка при чтении файла: {e}")
             st.stop()
 
-        # Приводим колонку "Страна" к строковому типу (чтобы избежать ошибок типа)
+        # Приводим колонки к нужным типам (чтобы избежать ошибок)
         df["Страна"] = df["Страна"].astype(str)
+        df["Мой комментарий"] = df["Мой комментарий"].astype(str)
+        df["Мое предложение"] = pd.to_numeric(df["Мое предложение"], errors="coerce")
+        df["Мое предложение (самовывоз)"] = pd.to_numeric(df["Мое предложение (самовывоз)"], errors="coerce")
+        df["Мой гарантированный объем"] = pd.to_numeric(df["Мой гарантированный объем"], errors="coerce")
 
         # Временные колонки
         df["Цена_из_справочника"] = None
@@ -148,6 +152,7 @@ if uploaded_file is not None and st.button("🚀 Обработать файл")
                 if pd.isna(country) or country is None:
                     country = ""
                 df.at[idx, "Страна_из_справочника"] = str(country)
+            # Если цена отсутствует (NaN) – ничего не делаем, строка останется без цены и будет удалена позже
 
         if unknown_rcs:
             st.warning(f"⚠️ Для следующих РЦ не найдено соответствие: {', '.join(unknown_rcs)}")
@@ -159,13 +164,16 @@ if uploaded_file is not None and st.button("🚀 Обработать файл")
                 df.at[idx, "Мое предложение"] = round(new_price, 2)
                 df.at[idx, "Мое предложение (самовывоз)"] = round(new_price + 10, 2)
                 df.at[idx, "Страна"] = row["Страна_из_справочника"]
+                # Обновляем комментарий, только если пользователь что-то ввёл
                 if comment.strip():
                     df.at[idx, "Мой комментарий"] = comment.strip()
+                # иначе оставляем существующий (уже строка)
                 df.at[idx, "Мой гарантированный объем"] = row["Количество"]
                 updated_count += 1
 
         df = df.drop(columns=["Цена_из_справочника", "Страна_из_справочника"], errors="ignore")
 
+        # Удаляем строки, где нет цены или страны (пустые)
         before = len(df)
         df = df[df["Мое предложение"].notna() & df["Страна"].notna()]
         after = len(df)
@@ -186,7 +194,7 @@ if uploaded_file is not None and st.button("🚀 Обработать файл")
 
         # Единственная кнопка скачивания
         st.download_button(
-            label="📥 Скачать файл ",
+            label="📥 Скачать файл (стандартная загрузка)",
             data=output,
             file_name=uploaded_file.name,
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
